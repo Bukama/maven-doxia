@@ -902,6 +902,37 @@ public class MarkdownParserTest extends AbstractParserTest {
         assertEquals("#HowDoISkipUnitTests", linkToAnchorAttributes.getAttribute("href"));
     }
 
+    @Test
+    public void testCustomHeadingAnchorIsRendered() throws ParseException, IOException {
+        parser.setEmitComments(true);
+        List<SinkEventElement> eventList =
+                parseFileToEventTestingSink("customanchor-heading-DOXIA-771").getEventList();
+
+        SinkEventElement headingText = eventList.get(2);
+        assertEquals("text", headingText.getName());
+        assertEquals(
+                "How do I skip unit tests when building a project?", headingText.getArgs()[0]);
+
+        SinkEventElement linkToAnchor = eventList.get(14);
+        assertEquals("link", linkToAnchor.getName());
+        SinkEventAttributeSet linkToAnchorAttributes =
+                (SinkEventAttributeSet) linkToAnchor.getArgs()[1];
+        assertEquals("#custom-id", linkToAnchorAttributes.getAttribute("href"));
+
+        boolean customAnchorFound = false;
+
+        for (SinkEventElement event : eventList) {
+            if ("anchor".equals(event.getName())) {
+                SinkEventAttributeSet attributes = (SinkEventAttributeSet) event.getArgs()[1];
+                if ("custom-id".equals(attributes.getAttribute("id"))) {
+                    customAnchorFound = true;
+                }
+            }
+        }
+
+        assertTrue(customAnchorFound);
+    }
+
     @Override
     protected String getVerbatimCodeSource() {
         return "```" + EOL + "<>{}=#*" + EOL + "```";
