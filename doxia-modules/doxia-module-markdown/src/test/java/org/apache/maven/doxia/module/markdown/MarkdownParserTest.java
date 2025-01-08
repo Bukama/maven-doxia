@@ -35,9 +35,7 @@ import org.apache.maven.doxia.sink.impl.SinkEventElement;
 import org.apache.maven.doxia.sink.impl.SinkEventTestingSink;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for {@link MarkdownParser}.
@@ -52,6 +50,13 @@ public class MarkdownParserTest extends AbstractParserTest {
      */
     @Inject
     protected MarkdownParser parser;
+
+    protected static void assertComment(ListIterator<SinkEventElement> it, String comment) {
+        assertSinkEquals(it.next(), "comment", comment);
+        // every comment ends with a line break in the emitted html which leads to an additional text event containing a
+        // line break in the event list
+        assertConcatenatedTextEquals(it, "", true);
+    }
 
     /**
      * {@inheritDoc}
@@ -860,13 +865,6 @@ public class MarkdownParserTest extends AbstractParserTest {
         assertSinkDoesNotContain(eventList.iterator(), "comment", "comment_");
     }
 
-    protected static void assertComment(ListIterator<SinkEventElement> it, String comment) {
-        assertSinkEquals(it.next(), "comment", comment);
-        // every comment ends with a line break in the emitted html which leads to an additional text event containing a
-        // line break in the event list
-        assertConcatenatedTextEquals(it, "", true);
-    }
-
     @Override
     protected void assertEventPrefix(Iterator<SinkEventElement> eventIterator) {
         assertSinkStartsWith(eventIterator, "head", "head_", "body");
@@ -884,6 +882,24 @@ public class MarkdownParserTest extends AbstractParserTest {
          * https://spec.commonmark.org/0.31.2/#fenced-code-blocks and https://spec.commonmark.org/0.31.2/#indented-code-blocks
          */
         return null;
+    }
+
+    @Test
+    public void testCustomHTHMLAnchorIsRendered() throws ParseException, IOException {
+        parser.setEmitComments(true);
+        List<SinkEventElement> eventList =
+                parseFileToEventTestingSink("customanchor-html-DOXIA-771").getEventList();
+
+        SinkEventElement anchor = eventList.get(4);
+        assertEquals("anchor", anchor.getName());
+        SinkEventAttributeSet anchorAttributes = (SinkEventAttributeSet) anchor.getArgs()[1];
+        assertEquals("HowDoISkipUnitTests", anchorAttributes.getAttribute("id"));
+
+        SinkEventElement linkToAnchor = eventList.get(15);
+        assertEquals("link", linkToAnchor.getName());
+        SinkEventAttributeSet linkToAnchorAttributes =
+                (SinkEventAttributeSet) linkToAnchor.getArgs()[1];
+        assertEquals("#HowDoISkipUnitTests", linkToAnchorAttributes.getAttribute("href"));
     }
 
     @Override
